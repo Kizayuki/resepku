@@ -29,7 +29,7 @@ const Login = () => {
           <Form.Label>Username</Form.Label>
           <Form.Control
             type="text"
-            placeholder="Masukkan Username"
+            placeholder="Masukkan Username anda"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required

@@ -8,7 +8,7 @@ import Home from './pages/Home';
 import RecipeDetail from './pages/RecipeDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import AdminDashboard from './admin/Dashboard';
+import AdminDashboard from './pages/Dashboard';
 
 const App = () => {
   return (

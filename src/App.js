@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import NavBar from './components/Navbar';
 import Footer from './components/Footer';
@@ -10,11 +10,18 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminDashboard from './pages/Dashboard';
 
-const App = () => {
+const AppContent = () => {
+  const location = useLocation();
+  const isDashboardAdmin = location.pathname === '/admin-dashboard';
+
   return (
-    <Router>
-      <NavBar />
-      <Header />
+    <>
+      {!isDashboardAdmin && (
+        <>
+          <NavBar />
+          <Header />
+        </>
+      )}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
@@ -23,9 +30,15 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/favorites" element={<Favorites />} />
       </Routes>
-      <Footer />
-    </Router>
+      {!isDashboardAdmin && <Footer />}
+    </>
   );
 };
+
+const App = () => (
+  <Router>
+    <AppContent />
+  </Router>
+);
 
 export default App;

@@ -9,15 +9,23 @@ const Login = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    
-    if (username === 'admin' && password === 'admin123') {
+    const storedUsers = JSON.parse(localStorage.getItem('users')) || [];
+    const user = storedUsers.find(u => u.username === username && u.password === password);
+
+    if (user) {
+      if (user.blocked) {
+        alert("Akun Anda telah diblokir!");
+      } else {
+        localStorage.setItem('isLoggedIn', true);
+        alert("Login berhasil sebagai User!");
+        navigate('/');
+      }
+    } else if (username === 'admin' && password === 'admin123') {
       localStorage.setItem('isAdmin', 'true');
       alert('Login berhasil sebagai Admin!');
-      navigate('/admin-dashboard');
+      navigate('/dashboard');
     } else {
-      localStorage.setItem('isAdmin', 'false');
-      alert('Login berhasil sebagai User!');
-      navigate('/');
+      alert('Username atau password salah!');
     }
   };
 

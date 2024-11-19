@@ -8,29 +8,30 @@ import Home from './pages/Home';
 import RecipeDetail from './pages/RecipeDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import AdminDashboard from './pages/Dashboard';
+import Dashboard from './pages/Dashboard';
+import DataUser from './pages/DataUser';
+import History from './pages/History';
 
 const AppContent = () => {
   const location = useLocation();
-  const isDashboardAdmin = location.pathname === '/admin-dashboard';
+  const showHeader = location.pathname === '/';
+  const hideNavbar = ['/dashboard', '/data-user', '/history'].includes(location.pathname);
 
   return (
     <>
-      {!isDashboardAdmin && (
-        <>
-          <NavBar />
-          <Header />
-        </>
-      )}
+      {!hideNavbar && <NavBar />}
+      {showHeader && <Header />}
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/recipe/:id" element={<RecipeDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/favorites" element={<Favorites />} />
+        <Route path="/data-user" element={<DataUser />} />
+        <Route path="/history" element={<History />} />
       </Routes>
-      {!isDashboardAdmin && <Footer />}
+      {!hideNavbar && <Footer />}
     </>
   );
 };

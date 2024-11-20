@@ -71,7 +71,6 @@ const Dashboard = () => {
           </ListGroup.Item>
         </ListGroup>
       </div>
-
       <div className="flex-grow-1">
         <Navbar bg="light" expand="lg" className="shadow-sm">
           <Container fluid>

@@ -16,7 +16,7 @@ const Dashboard = () => {
   useEffect(() => {
     const isAdmin = localStorage.getItem('isAdmin');
     if (!isAdmin || isAdmin === 'false') {
-      alert('Anda harus login sebagai admin untuk mengakses dashboard ini!');
+      alert('Anda harus login sebagai admin untuk mengakses halaman ini!');
       navigate('/login');
     }
   }, [navigate]);

@@ -1,8 +1,17 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Navbar as BootstrapNavbar, Nav, Container, NavDropdown, Button } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { LoginContext } from '../context/LoginContext';
 
 const NavBar = () => {
+  const { isLoggedIn, logout } = useContext(LoginContext);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <BootstrapNavbar bg="light" expand="lg">
       <Container>
@@ -20,9 +29,15 @@ const NavBar = () => {
             <Nav.Link as={Link} to="/favorites">Favorit</Nav.Link>
           </Nav>
           <Nav className="ms-auto">
-            <Button as={Link} to="/login" variant="primary" className="ml-auto">
-              Login
-            </Button>
+            {isLoggedIn ? (
+              <Button variant="danger" onClick={handleLogout} className="ml-auto">
+                Logout
+              </Button>
+            ) : (
+              <Button as={Link} to="/login" variant="primary" className="ml-auto">
+                Login
+              </Button>
+            )}
           </Nav>
         </BootstrapNavbar.Collapse>
       </Container>

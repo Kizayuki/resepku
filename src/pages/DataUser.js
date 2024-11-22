@@ -25,7 +25,7 @@ const DataUser = () => {
       <div className="flex-grow-1">
         <AdminNavbar />
         <Container className="mt-4">
-          <h4>Data User</h4>
+          <h4>List Data User</h4>
           <Table bordered>
             <thead>
               <tr>

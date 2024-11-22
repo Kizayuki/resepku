@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Form, Button } from 'react-bootstrap';
+import { LoginContext } from '../context/LoginContext';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const { login } = useContext(LoginContext);
   const navigate = useNavigate();
 
   const handleLogin = (e) => {
@@ -16,12 +18,13 @@ const Login = () => {
       if (user.blocked) {
         alert("Akun Anda telah diblokir!");
       } else {
-        localStorage.setItem('isLoggedIn', true);
-        alert("Login berhasil sebagai User!");
+        login();
+        alert("Login berhasil!");
         navigate('/');
       }
     } else if (username === 'admin' && password === 'admin123') {
       localStorage.setItem('isAdmin', 'true');
+      login();
       alert('Login berhasil sebagai Admin!');
       navigate('/dashboard');
     } else {

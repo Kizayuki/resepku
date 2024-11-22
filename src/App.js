@@ -11,6 +11,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import DataUser from './pages/DataUser';
 import History from './pages/History';
+import { LoginProvider } from './context/LoginContext';
 
 const AppContent = () => {
   const location = useLocation();
@@ -37,9 +38,11 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <Router>
-    <AppContent />
-  </Router>
+  <LoginProvider>
+    <Router>
+      <AppContent />
+    </Router>
+  </LoginProvider>
 );
 
 export default App;

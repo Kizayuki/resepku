@@ -11,7 +11,6 @@ const History = () => {
         <AdminNavbar />
         <Container className="mt-4">
           <h4>Riwayat Pengunjung</h4>
-          {/* Konten riwayat pengunjung */}
         </Container>
       </div>
     </div>

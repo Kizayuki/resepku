@@ -6,12 +6,51 @@ import AdminNavbar from '../components/AdminNavbar';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [resep, setResep] = useState([
-    { id: 1, nama: "Nasi Goreng", kategori: "Makanan Utama" },
-    { id: 2, nama: "Es Teh Manis", kategori: "Minuman" },
-  ]);
+  const [resep, setResep] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ id: null, nama: "", kategori: "" });
+  const [formData, setFormData] = useState({ id: null, nama: "", kategori: "", image_url: "" });
+
+  useEffect(() => {
+    const storedRecipes = JSON.parse(localStorage.getItem('recipes')) || [];
+    if (storedRecipes.length === 0) {
+      const defaultRecipes = [
+        { id: 1, nama: "Sosis Bakar Praktis", kategori: "Cemilan", image_url: "/images/sosis.jpg" },
+        { id: 2, nama: "Ayam Goreng Praktis", kategori: "Sarapan", image_url: "/images/ayam.jpg" },
+        { id: 3, nama: "Japanese Oyakodon Simple", kategori: "Makan Siang", image_url: "/images/oyakodon.jpg" },
+        { id: 4, nama: "Donat Simple", kategori: "Cemilan", image_url: "/images/donat.jpg" },
+      ];
+      localStorage.setItem('recipes', JSON.stringify(defaultRecipes));
+      setResep(defaultRecipes);
+    } else {
+      setResep(storedRecipes);
+    }
+  }, []);
+
+  const handleShowModal = (data = { id: null, nama: "", kategori: "", image_url: "" }) => {
+    setFormData(data);
+    setShowModal(true);
+  };
+
+  const handleSave = () => {
+    let updatedRecipes;
+    if (formData.id) {
+      updatedRecipes = resep.map(r => (r.id === formData.id ? formData : r));
+    } else {
+      const newRecipe = { ...formData, id: Date.now() };
+      updatedRecipes = [...resep, newRecipe];
+    }
+    setResep(updatedRecipes);
+    localStorage.setItem('recipes', JSON.stringify(updatedRecipes));
+    setShowModal(false);
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm("Apakah Anda yakin ingin menghapus resep ini?")) {
+      const updatedRecipes = resep.filter(r => r.id !== id);
+      setResep(updatedRecipes);
+      localStorage.setItem('recipes', JSON.stringify(updatedRecipes));
+    }
+  };
 
   useEffect(() => {
     const isAdmin = localStorage.getItem('isAdmin');
@@ -20,24 +59,6 @@ const Dashboard = () => {
       navigate('/login');
     }
   }, [navigate]);
-
-  const handleShowModal = (data = { id: null, nama: "", kategori: "" }) => {
-    setFormData(data);
-    setShowModal(true);
-  };
-
-  const handleSave = () => {
-    if (formData.id) {
-      setResep(resep.map(r => (r.id === formData.id ? formData : r)));
-    } else {
-      setResep([...resep, { ...formData, id: Date.now() }]);
-    }
-    setShowModal(false);
-  };
-
-  const handleDelete = (id) => {
-    setResep(resep.filter(r => r.id !== id));
-  };
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
@@ -54,6 +75,7 @@ const Dashboard = () => {
                   <th>No</th>
                   <th>Nama Resep</th>
                   <th>Kategori</th>
+                  <th>Gambar</th>
                   <th>Tindakan</th>
                 </tr>
               </thead>
@@ -63,6 +85,9 @@ const Dashboard = () => {
                     <td>{index + 1}</td>
                     <td>{item.nama}</td>
                     <td>{item.kategori}</td>
+                    <td>
+                      <img src={item.image_url} alt={item.nama} style={{ width: "100px" }} />
+                    </td>
                     <td>
                       <Button
                         variant="warning"
@@ -95,6 +120,7 @@ const Dashboard = () => {
                       type="text"
                       value={formData.nama}
                       onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                      required
                     />
                   </Form.Group>
                   <Form.Group className="mb-3">
@@ -103,6 +129,16 @@ const Dashboard = () => {
                       type="text"
                       value={formData.kategori}
                       onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
+                      required
+                    />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>URL Gambar</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={formData.image_url}
+                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                      required
                     />
                   </Form.Group>
                 </Form>

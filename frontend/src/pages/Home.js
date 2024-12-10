@@ -1,43 +1,66 @@
 import React, { useEffect, useState } from 'react';
+import { Container, Row, Col, Button, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { Card, Container, Row, Col, Button } from 'react-bootstrap';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Home = () => {
   const [resep, setResep] = useState([]);
   const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
-    const storedRecipes = JSON.parse(localStorage.getItem('recipes')) || [];
-    const savedFavorites = JSON.parse(localStorage.getItem('favorites')) || [];
-    setResep(storedRecipes);
-    setFavorites(savedFavorites);
+    fetch('http://localhost:5000/recipes')
+      .then((res) => res.json())
+      .then((data) => setResep(data))
+      .catch((err) => console.error('Error:', err));
+    
+    fetch('http://localhost:5000/favorites')
+      .then((res) => res.json())
+      .then((data) => setFavorites(data))
+      .catch((err) => console.error('Error:', err));
   }, []);
 
   const toggleFavorite = (recipe) => {
-    const updatedFavorites = favorites.some((fav) => fav.id === recipe.id)
-      ? favorites.filter((fav) => fav.id !== recipe.id)
-      : [...favorites, recipe];
-    setFavorites(updatedFavorites);
-  
-    const fullRecipe = resep.find((r) => r.id === recipe.id);
-    const favoritesWithFullData = updatedFavorites.map((fav) => ({
-      ...fullRecipe,
-      ...fav,
-    }));
-    localStorage.setItem('favorites', JSON.stringify(favoritesWithFullData));
+    const isFavorited = favorites.some((fav) => fav.id === recipe.id);
+    if (isFavorited) {
+      fetch(`http://localhost:5000/favorites/${recipe.id}`, { method: 'DELETE' })
+        .then(() => {
+          setFavorites((prev) => prev.filter((fav) => fav.id !== recipe.id));
+          toast.success('Resep dihapus dari favorit!');
+        })
+        .catch((err) => {
+          toast.error('Terjadi kesalahan saat menghapus dari favorit.');
+          console.error('Error:', err);
+        });
+    } else {
+      fetch('http://localhost:5000/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_resep: recipe.id }),
+      })
+        .then(() => {
+          setFavorites((prev) => [...prev, recipe]);
+          toast.success('Resep ditambahkan ke favorit!');
+        })
+        .catch((err) => {
+          toast.error('Terjadi kesalahan saat menambahkan favorit.');
+          console.error('Error:', err);
+        });
+    }
   };
-  
+
   return (
     <Container>
+      <ToastContainer />
       <h1 className="my-4">Daftar Resep</h1>
       <Row>
         {resep.map((recipe) => (
           <Col md={4} key={recipe.id} className="mb-4">
             <Card>
-              <Card.Img variant="top" src={recipe.image_url} alt={recipe.nama} />
+              <Card.Img variant="top" src={recipe.image} alt={recipe.judul} />
               <Card.Body>
-                <Card.Title>{recipe.nama}</Card.Title>
-                <Card.Text>{recipe.kategori}</Card.Text>
+                <Card.Title>{recipe.judul}</Card.Title>
+                <Card.Text>{recipe.deskripsi}</Card.Text>
                 <Button variant="link" onClick={() => toggleFavorite(recipe)}>
                   {favorites.some((fav) => fav.id === recipe.id) ? '❤️' : '🤍'}
                 </Button>

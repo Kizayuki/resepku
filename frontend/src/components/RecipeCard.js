@@ -1,17 +1,27 @@
-import React from 'react';
-import { Card, Button } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import RecipeCard from './RecipeCard';
+import { Container, Row } from 'react-bootstrap';
 
-const RecipeCard = ({ recipe }) => {
+const Home = () => {
+  const [resep, setResep] = useState([]);
+
+  useEffect(() => {
+    // Mengambil data resep dari API
+    fetch('http://localhost:5000/recipes')  // Sesuaikan URL API sesuai kebutuhan
+      .then((res) => res.json())
+      .then((data) => setResep(data))
+      .catch((err) => console.error('Error:', err));
+  }, []);
+
   return (
-    <Card style={{ width: '18rem' }} className="mb-3">
-      <Card.Img variant="top" src={recipe.image} />
-      <Card.Body>
-        <Card.Title>{recipe.title}</Card.Title>
-        <Card.Text>{recipe.description}</Card.Text>
-        <Button variant="primary" href={`/recipe/${recipe.id}`}>Lihat Resep</Button>
-      </Card.Body>
-    </Card>
+    <Container>
+      <Row>
+        {resep.map((recipe) => (
+          <RecipeCard key={recipe.id} recipe={recipe} />
+        ))}
+      </Row>
+    </Container>
   );
 };
 
-export default RecipeCard;
+export default Home;

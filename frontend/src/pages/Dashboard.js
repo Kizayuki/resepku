@@ -3,62 +3,111 @@ import { Container, Table, Button, Modal, Form } from "react-bootstrap";
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import AdminNavbar from '../components/AdminNavbar';
+import { toast, ToastContainer } from 'react-toastify';  // Impor toast
+import 'react-toastify/dist/ReactToastify.css';  // Impor CSS untuk toast
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [resep, setResep] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ id: null, nama: "", kategori: "", image_url: "" });
+  const [formData, setFormData] = useState({ id: null, nama: "", deskripsi: "", kategori: "", bahan: "", langkah: "", image: "" });
 
+  // Memeriksa apakah user adalah admin sebelum masuk ke halaman
   useEffect(() => {
-    const storedRecipes = JSON.parse(localStorage.getItem('recipes')) || [];
-    if (storedRecipes.length === 0) {
-      const defaultRecipes = [
-        { id: 1, nama: "Sosis Bakar Praktis", kategori: "Cemilan", image_url: "/images/sosis.jpg" },
-        { id: 2, nama: "Ayam Goreng Praktis", kategori: "Sarapan", image_url: "/images/ayam.jpg" },
-        { id: 3, nama: "Japanese Oyakodon Simple", kategori: "Makan Siang", image_url: "/images/oyakodon.jpg" },
-        { id: 4, nama: "Donat Simple", kategori: "Cemilan", image_url: "/images/donat.jpg" },
-      ];
-      localStorage.setItem('recipes', JSON.stringify(defaultRecipes));
-      setResep(defaultRecipes);
-    } else {
-      setResep(storedRecipes);
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      alert('Anda harus login untuk mengakses halaman ini!');
+      navigate('/login');
+      return;
     }
-  }, []);
-
-  const handleShowModal = (data = { id: null, nama: "", kategori: "", image_url: "" }) => {
-    setFormData(data);
-    setShowModal(true);
-  };
-
-  const handleSave = () => {
-    let updatedRecipes;
-    if (formData.id) {
-      updatedRecipes = resep.map(r => (r.id === formData.id ? formData : r));
-    } else {
-      const newRecipe = { ...formData, id: Date.now() };
-      updatedRecipes = [...resep, newRecipe];
-    }
-    setResep(updatedRecipes);
-    localStorage.setItem('recipes', JSON.stringify(updatedRecipes));
-    setShowModal(false);
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus resep ini?")) {
-      const updatedRecipes = resep.filter(r => r.id !== id);
-      setResep(updatedRecipes);
-      localStorage.setItem('recipes', JSON.stringify(updatedRecipes));
-    }
-  };
-
-  useEffect(() => {
-    const isAdmin = localStorage.getItem('isAdmin');
-    if (!isAdmin || isAdmin === 'false') {
+    
+    const userData = JSON.parse(atob(token.split('.')[1])); // Decode token untuk memeriksa role
+    if (userData.role !== 'admin') {
       alert('Anda harus login sebagai admin untuk mengakses halaman ini!');
       navigate('/login');
     }
   }, [navigate]);
+
+  // Ambil data resep dari backend
+  useEffect(() => {
+    fetch('http://localhost:5000/recipes', {
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('token')}` // Menyertakan token di header
+      }
+    })
+      .then((res) => res.json())
+      .then((data) => setResep(data))
+      .catch((err) => console.error('Error:', err));
+  }, []);
+
+  // Menampilkan modal untuk tambah atau edit
+  const handleShowModal = (data = null) => {
+    // Jika data kosong (untuk tambah resep), set formData dengan nilai default
+    setFormData({
+      id: data?.id || null,
+      nama: data?.judul || "",
+      kategori: data?.kategori || "",
+      deskripsi: data?.deskripsi || "",
+      bahan: data?.bahan || "",
+      langkah: data?.langkah || "",
+      image: data?.image || "",
+    });
+    setShowModal(true); // Menampilkan modal
+  };  
+
+  // Simpan data (tambah atau edit)
+  const handleSave = () => {
+    const method = formData.id ? 'PUT' : 'POST';
+    const endpoint = formData.id
+      ? `http://localhost:5000/recipes/${formData.id}`
+      : 'http://localhost:5000/recipes';
+    
+    fetch(endpoint, {
+      method,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        judul: formData.nama,
+        deskripsi: formData.deskripsi,
+        kategori: formData.kategori,
+        bahan: formData.bahan,
+        langkah: formData.langkah,
+        image: formData.image,
+      }),
+    })
+    .then((res) => res.json())
+    .then((data) => {
+      if (formData.id) {
+        setResep((prev) => prev.map((recipe) => recipe.id === data.id ? data : recipe));
+        toast.success('Resep berhasil diubah!');
+      } else {
+        setResep((prev) => [...prev, data]);
+        toast.success('Resep berhasil ditambahkan!');
+      }
+    })
+    .catch((err) => {
+      toast.error('Terjadi kesalahan saat menyimpan resep.');
+      console.error('Error:', err);
+    });
+    setShowModal(false);
+  };  
+  
+  // Hapus data resep
+  const handleDelete = (id) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus resep ini?')) {
+      fetch(`http://localhost:5000/recipes/${id}`, { method: 'DELETE' })
+        .then(() => {
+          setResep((prev) => prev.filter((recipe) => recipe.id !== id));
+          toast.success('Resep berhasil dihapus!');  // Notifikasi sukses
+        })
+        .catch((err) => {
+          toast.error('Terjadi kesalahan saat menghapus resep.');  // Notifikasi error
+          console.error('Error:', err);
+        });
+    }
+  };  
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
@@ -75,7 +124,6 @@ const Dashboard = () => {
                   <th>No</th>
                   <th>Nama Resep</th>
                   <th>Kategori</th>
-                  <th>Gambar</th>
                   <th>Tindakan</th>
                 </tr>
               </thead>
@@ -83,16 +131,13 @@ const Dashboard = () => {
                 {resep.map((item, index) => (
                   <tr key={item.id}>
                     <td>{index + 1}</td>
-                    <td>{item.nama}</td>
+                    <td>{item.judul}</td>
                     <td>{item.kategori}</td>
                     <td>
-                      <img src={item.image_url} alt={item.nama} style={{ width: "100px" }} />
-                    </td>
-                    <td>
                       <Button
-                        variant="warning"
-                        size="sm"
-                        onClick={() => handleShowModal(item)}
+                      variant="warning"
+                      size="sm"
+                      onClick={() => handleShowModal(item)} // Mengirimkan data resep untuk edit
                       >
                         Edit
                       </Button>{" "}
@@ -120,25 +165,50 @@ const Dashboard = () => {
                       type="text"
                       value={formData.nama}
                       onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                      required
+                    />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Deskripsi</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      value={formData.deskripsi}
+                      onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
                     />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>Kategori</Form.Label>
                     <Form.Control
-                      type="text"
+                      as="textarea"
+                      rows={3}
                       value={formData.kategori}
                       onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
-                      required
+                    />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Bahan</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      value={formData.bahan}
+                      onChange={(e) => setFormData({ ...formData, bahan: e.target.value })}
+                    />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Langkah</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      value={formData.langkah}
+                      onChange={(e) => setFormData({ ...formData, langkah: e.target.value })}
                     />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>URL Gambar</Form.Label>
                     <Form.Control
                       type="text"
-                      value={formData.image_url}
-                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                      required
+                      value={formData.image}
+                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                     />
                   </Form.Group>
                 </Form>
@@ -155,6 +225,7 @@ const Dashboard = () => {
           </div>
         </Container>
       </div>
+      <ToastContainer /> {/* Menampilkan ToastContainer */}
     </div>
   );
 };

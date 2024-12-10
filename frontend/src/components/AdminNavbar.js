@@ -1,17 +1,31 @@
-import React, { useContext } from 'react';
+import React, { useEffect } from 'react';
 import { Navbar, Container, Nav, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { LoginContext } from '../context/LoginContext';
 
 const AdminNavbar = () => {
-  const { logout } = useContext(LoginContext);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Memeriksa apakah token ada di sessionStorage dan apakah role adalah 'admin'
+    const token = sessionStorage.getItem('token');
+    const username = sessionStorage.getItem('username');
+    
+    if (!token || !username) {
+      navigate('/login'); // Jika tidak ada token atau username, arahkan ke halaman login
+    } else {
+      const userData = JSON.parse(atob(token.split('.')[1])); // Decode token untuk mendapatkan data pengguna
+      if (userData.role !== 'admin') {
+        navigate('/'); // Jika bukan admin, arahkan ke halaman home
+      }
+    }
+  }, [navigate]);
+
   const handleLogout = () => {
-    logout();
-    localStorage.removeItem('isAdmin');
+    // Menghapus token dari sessionStorage untuk logout
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('username');
     alert("Berhasil Logout!");
-    navigate('/login');
+    navigate('/login'); // Arahkan ke halaman login setelah logout
   };
 
   return (

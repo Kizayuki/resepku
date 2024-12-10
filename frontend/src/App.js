@@ -11,7 +11,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import DataUser from './pages/DataUser';
 import History from './pages/History';
-import { LoginProvider } from './context/LoginContext';
+import CategoryPage from './pages/CategoryPage';
+import Comments from './pages/Comments';
 
 const AppContent = () => {
   const location = useLocation();
@@ -31,6 +32,8 @@ const AppContent = () => {
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/data-user" element={<DataUser />} />
         <Route path="/history" element={<History />} />
+        <Route path="/category/:kategori" element={<CategoryPage />} />
+        <Route path="/comments" element={<Comments />} />
       </Routes>
       {!hideNavbar && <Footer />}
     </>
@@ -38,11 +41,9 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <LoginProvider>
     <Router>
       <AppContent />
     </Router>
-  </LoginProvider>
 );
 
 export default App;

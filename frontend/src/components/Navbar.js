@@ -1,16 +1,18 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { Navbar as BootstrapNavbar, Nav, Container, NavDropdown, Button } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { LoginContext } from '../context/LoginContext';
 
 const NavBar = () => {
-  const { isLoggedIn, logout } = useContext(LoginContext);
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
+    // Menghapus token dari sessionStorage
+    sessionStorage.removeItem('token');
+    alert('Logout berhasil!');
     navigate('/login');
   };
+
+  const isLoggedIn = !!sessionStorage.getItem('token'); // Cek jika ada token di sessionStorage
 
   return (
     <BootstrapNavbar bg="light" expand="lg">
@@ -19,22 +21,33 @@ const NavBar = () => {
         <BootstrapNavbar.Toggle aria-controls="basic-navbar-nav" />
         <BootstrapNavbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
+            {/* Menu Home */}
             <Nav.Link as={Link} to="/">Home</Nav.Link>
+
+            {/* Dropdown Kategori */}
             <NavDropdown title="Kategori" id="basic-nav-dropdown">
-              <NavDropdown.Item href="#breakfast">Sarapan</NavDropdown.Item>
-              <NavDropdown.Item href="#lunch">Makan Siang</NavDropdown.Item>
-              <NavDropdown.Item href="#dinner">Makan Malam</NavDropdown.Item>
-              <NavDropdown.Item href="#snack">Cemilan</NavDropdown.Item>
+              <NavDropdown.Item as={Link} to="/category/sarapan">Sarapan</NavDropdown.Item>
+              <NavDropdown.Item as={Link} to="/category/makan-siang">Makan Siang</NavDropdown.Item>
+              <NavDropdown.Item as={Link} to="/category/makan-malam">Makan Malam</NavDropdown.Item>
+              <NavDropdown.Item as={Link} to="/category/cemilan">Cemilan</NavDropdown.Item>
             </NavDropdown>
-            <Nav.Link as={Link} to="/favorites">Favorit</Nav.Link>
+
+            {/* Menu Favorit dan Komentar (Hanya Muncul Jika Login) */}
+            {isLoggedIn && (
+              <>
+                <Nav.Link as={Link} to="/favorites">Favorit</Nav.Link>
+                <Nav.Link as={Link} to="/comments">Komentar</Nav.Link>
+              </>
+            )}
           </Nav>
           <Nav className="ms-auto">
+            {/* Tombol Login atau Logout */}
             {isLoggedIn ? (
-              <Button variant="danger" onClick={handleLogout} className="ml-auto">
+              <Button variant="danger" onClick={handleLogout}>
                 Logout
               </Button>
             ) : (
-              <Button as={Link} to="/login" variant="primary" className="ml-auto">
+              <Button as={Link} to="/login" variant="primary">
                 Login
               </Button>
             )}

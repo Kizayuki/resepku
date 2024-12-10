@@ -5,17 +5,31 @@ import { Link } from 'react-router-dom';
 const Favorites = () => {
   const [favorites, setFavorites] = useState([]);
 
+  // Ambil data favorit dari backend
   useEffect(() => {
-    const savedFavorites = JSON.parse(localStorage.getItem('favorites')) || [];
-    setFavorites(savedFavorites);
+    fetch('http://localhost:5000/favorites')
+      .then((res) => res.json())
+      .then((data) => setFavorites(data))
+      .catch((err) => console.error('Error:', err));
   }, []);
 
+  // Tambah atau hapus dari favorit
   const toggleFavorite = (recipe) => {
-    const updatedFavorites = favorites.some((fav) => fav.id === recipe.id)
-      ? favorites.filter((fav) => fav.id !== recipe.id)
-      : [...favorites, recipe];
-    setFavorites(updatedFavorites);
-    localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+    const isFavorited = favorites.some((fav) => fav.id === recipe.id);
+
+    if (isFavorited) {
+      fetch(`http://localhost:5000/favorites/${recipe.id}`, { method: 'DELETE' })
+        .then(() => setFavorites((prev) => prev.filter((fav) => fav.id !== recipe.id)))
+        .catch((err) => console.error('Error:', err));
+    } else {
+      fetch('http://localhost:5000/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_resep: recipe.id }),
+      })
+        .then(() => setFavorites((prev) => [...prev, recipe]))
+        .catch((err) => console.error('Error:', err));
+    }
   };
 
   return (
@@ -28,9 +42,9 @@ const Favorites = () => {
           favorites.map((recipe) => (
             <Col md={4} key={recipe.id} className="mb-4">
               <Card>
-                <Card.Img variant="top" src={recipe.image_url} alt={recipe.nama} />
+                <Card.Img variant="top" src={recipe.image} alt={recipe.judul} />
                 <Card.Body>
-                  <Card.Title>{recipe.nama}</Card.Title>
+                  <Card.Title>{recipe.judul}</Card.Title>
                   <Card.Text>{recipe.kategori}</Card.Text>
                   <Button variant="link" onClick={() => toggleFavorite(recipe)}>
                     {favorites.some((fav) => fav.id === recipe.id) ? '❤️' : '🤍'}

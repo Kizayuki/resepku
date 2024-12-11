@@ -57,7 +57,7 @@ app.get('/recipes/:id', (req, res) => {
 // Tambah resep
 app.post('/recipes', (req, res) => {
   const { judul, deskripsi, kategori, bahan, langkah, image } = req.body;
-  
+
   db.query(
     'INSERT INTO resep (judul, deskripsi, kategori, bahan, langkah, image, tanggal) VALUES (?, ?, ?, ?, ?, ?, NOW())',
     [judul, deskripsi, kategori, bahan, langkah, image],
@@ -66,15 +66,15 @@ app.post('/recipes', (req, res) => {
         res.status(500).send(err);
         return;
       }
-      res.json({ 
-        id: result.insertId, 
-        judul, 
-        deskripsi, 
-        kategori, 
-        bahan, 
-        langkah, 
-        image, 
-        tanggal: new Date() 
+      res.json({
+        id: result.insertId,
+        judul,
+        deskripsi,
+        kategori,
+        bahan,
+        langkah,
+        image,
+        tanggal: new Date(),
       });
     }
   );
@@ -114,46 +114,67 @@ app.delete('/recipes/:id', (req, res) => {
   });
 });
 
-// Ambil semua favorit
-app.get('/favorites', (req, res) => {
+// Ambil semua favorit berdasarkan id_user
+app.get('/favorites', authenticateToken, (req, res) => {
+  const id_user = req.user.id; // Ambil id_user dari token
+
   db.query(
     `SELECT r.id, r.judul, r.kategori, r.image 
      FROM favorit f 
-     INNER JOIN resep r ON f.id_resep = r.id`,
+     INNER JOIN resep r ON f.id_resep = r.id 
+     WHERE f.id_user = ?`,
+    [id_user],
     (err, results) => {
       if (err) {
+        console.error('Error:', err);
         res.status(500).send(err);
         return;
       }
-      res.json(results);
+      res.json(results); // Kirim daftar favorit
     }
   );
 });
 
 // Tambah ke favorit
-app.post('/favorites', (req, res) => {
+app.post('/favorites', authenticateToken, (req, res) => {
   const { id_resep } = req.body;
+  const id_user = req.user.id; // Ambil id_user dari token
 
-  db.query('INSERT INTO favorit (id_resep) VALUES (?)', [id_resep], (err) => {
-    if (err) {
-      res.status(500).send(err);
-      return;
+  if (!id_resep) {
+    return res.status(400).send('ID Resep harus diisi.');
+  }
+
+  db.query(
+    'INSERT INTO favorit (id_resep, id_user) VALUES (?, ?)',
+    [id_resep, id_user],
+    (err) => {
+      if (err) {
+        console.error('Query Error:', err);
+        res.status(500).send(err);
+        return;
+      }
+      res.status(201).send('Resep berhasil ditambahkan ke favorit.');
     }
-    res.sendStatus(201);
-  });
+  );
 });
 
 // Hapus dari favorit
-app.delete('/favorites/:id', (req, res) => {
-  const { id } = req.params;
+app.delete('/favorites/:id', authenticateToken, (req, res) => {
+  const { id } = req.params; // ID resep
+  const id_user = req.user.id; // Ambil id_user dari token
 
-  db.query('DELETE FROM favorit WHERE id_resep = ?', [id], (err) => {
-    if (err) {
-      res.status(500).send(err);
-      return;
+  db.query(
+    'DELETE FROM favorit WHERE id_resep = ? AND id_user = ?',
+    [id, id_user],
+    (err) => {
+      if (err) {
+        console.error('Query Error:', err);
+        res.status(500).send(err);
+        return;
+      }
+      res.status(200).send('Resep berhasil dihapus dari favorit.');
     }
-    res.sendStatus(200);
-  });
+  );
 });
 
 // Endpoint untuk login
@@ -205,54 +226,14 @@ app.post('/login', (req, res) => {
   );
 });
 
-// Endpoint untuk History
-app.get('/history', (req, res) => {
-  db.query(
-    'SELECT username, login_time FROM history WHERE username != "admin" ORDER BY login_time DESC',
-    (err, results) => {
-      if (err) {
-        res.status(500).send(err);
-        return;
-      }
-      res.json(results);
-    }
-  );
-});
+// Endpoint untuk mengambil semua user (kecuali admin)
+app.get('/users', authenticateToken, (req, res) => {
+  const { role } = req.user;
+  if (role !== 'admin') {
+    return res.status(403).send('Akses ditolak, hanya admin yang bisa melihat data user.');
+  }
 
-// Endpoint untuk registrasi
-app.post('/register', (req, res) => {
-  const { username, password, role, status } = req.body;
-
-  // Periksa apakah username sudah ada
-  db.query('SELECT * FROM user WHERE username = ?', [username], (err, results) => {
-    if (err) {
-      res.status(500).send(err);
-      return;
-    }
-
-    if (results.length > 0) {
-      res.status(409).send('Username sudah digunakan!');
-      return;
-    }
-
-    // Tambahkan user baru ke database
-    db.query(
-      'INSERT INTO user (username, password, role, status) VALUES (?, ?, ?, ?)',
-      [username, password, role, status],
-      (err) => {
-        if (err) {
-          res.status(500).send(err);
-          return;
-        }
-        res.sendStatus(201); // Registrasi berhasil
-      }
-    );
-  });
-});
-
-// Endpoint untuk mengambil semua user
-app.get('/users', (req, res) => {
-  db.query('SELECT id, username, status FROM user', (err, results) => {
+  db.query('SELECT id, username, status FROM user WHERE role != "admin"', (err, results) => {
     if (err) {
       res.status(500).send(err);
       return;
@@ -262,7 +243,7 @@ app.get('/users', (req, res) => {
 });
 
 // Endpoint untuk memperbarui status user
-app.patch('/users/:id', (req, res) => {
+app.patch('/users/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -310,41 +291,46 @@ const authenticateToken = (req, res, next) => {
 
 // Endpoint untuk dashboard yang memerlukan autentikasi
 app.get('/dashboard', authenticateToken, (req, res) => {
-  // Hanya akan dijalankan jika token valid
   res.send('Welcome to the dashboard, ' + req.user.username);
 });
 
 // Endpoint untuk menambah komentar
 app.post('/comments', authenticateToken, (req, res) => {
   const { id_resep, komen } = req.body;
-  const id_user = req.user.id; // Ambil id_user dari token yang sudah diverifikasi
+  const id_user = req.user.id;
 
   if (!id_resep || !komen) {
     return res.status(400).send('ID Resep dan komentar harus diisi');
   }
 
+  // Menambahkan komentar ke dalam database
   db.query(
     'INSERT INTO komentar (id_resep, id_user, komen) VALUES (?, ?, ?)',
     [id_resep, id_user, komen],
     (err, result) => {
       if (err) {
-        console.error('Query Error:', err); // Log error query
-        res.status(500).send(err);
-        return;
+        console.error('Query Error:', err);
+        return res.status(500).send(err);
       }
-      // Kirim data komentar yang baru dimasukkan
-      res.status(201).json({
-        id: result.insertId,
-        id_resep,
-        id_user,
-        komen,
-        tanggal: new Date().toISOString(), // Menggunakan timestamp saat ini
-      });
+
+      // Mengambil komentar yang baru saja ditambahkan
+      db.query(
+        'SELECT komentar.id, komentar.komen, komentar.tanggal, users.username FROM komentar JOIN users ON komentar.id_user = users.id WHERE komentar.id = ?',
+        [result.insertId], // Mengambil komentar berdasarkan ID yang baru ditambahkan
+        (err, results) => {
+          if (err) {
+            console.error('Error fetching new comment:', err);
+            return res.status(500).send(err);
+          }
+
+          res.status(201).json(results[0]); // Mengembalikan data komentar yang baru saja ditambahkan
+        }
+      );
     }
   );
 });
 
-// Ambil komentar berdasarkan ID resep
+// Endpoint untuk mengambil komentar berdasarkan ID resep
 app.get('/comments/:id_resep', (req, res) => {
   const { id_resep } = req.params;
 
@@ -354,10 +340,11 @@ app.get('/comments/:id_resep', (req, res) => {
     (err, results) => {
       if (err) {
         console.error('Error:', err);
-        res.status(500).send(err);
+        res.status(500).send('Terjadi kesalahan saat mengambil komentar.');
         return;
       }
-      res.json(results);
+
+      res.json(results); // Mengembalikan data komentar yang valid
     }
   );
 });

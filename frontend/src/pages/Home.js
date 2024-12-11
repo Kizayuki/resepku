@@ -7,35 +7,74 @@ import 'react-toastify/dist/ReactToastify.css';
 const Home = () => {
   const [resep, setResep] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Status login user
 
   useEffect(() => {
+    // Cek login berdasarkan token
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      setIsLoggedIn(true);
+
+      // Ambil data favorit
+      fetch('http://localhost:5000/favorites', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error('Gagal mengambil data favorit.');
+          }
+          return res.json();
+        })
+        .then((data) => setFavorites(data))
+        .catch((err) => {
+          console.error('Error fetching favorites:', err);
+          toast.error('Terjadi kesalahan saat mengambil data favorit.');
+        });
+    }
+
+    // Ambil data resep
     fetch('http://localhost:5000/recipes')
       .then((res) => res.json())
       .then((data) => setResep(data))
-      .catch((err) => console.error('Error:', err));
-    
-    fetch('http://localhost:5000/favorites')
-      .then((res) => res.json())
-      .then((data) => setFavorites(data))
-      .catch((err) => console.error('Error:', err));
+      .catch((err) => {
+        console.error('Error:', err);
+        toast.error('Terjadi kesalahan saat mengambil data resep.');
+      });
   }, []);
 
   const toggleFavorite = (recipe) => {
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      toast.warning('Login terlebih dahulu untuk menambah ke favorit.');
+      return;
+    }
+
     const isFavorited = favorites.some((fav) => fav.id === recipe.id);
+
     if (isFavorited) {
-      fetch(`http://localhost:5000/favorites/${recipe.id}`, { method: 'DELETE' })
+      fetch(`http://localhost:5000/favorites/${recipe.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
         .then(() => {
           setFavorites((prev) => prev.filter((fav) => fav.id !== recipe.id));
           toast.success('Resep dihapus dari favorit!');
         })
         .catch((err) => {
-          toast.error('Terjadi kesalahan saat menghapus dari favorit.');
           console.error('Error:', err);
+          toast.error('Terjadi kesalahan saat menghapus dari favorit.');
         });
     } else {
       fetch('http://localhost:5000/favorites', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ id_resep: recipe.id }),
       })
         .then(() => {
@@ -43,8 +82,8 @@ const Home = () => {
           toast.success('Resep ditambahkan ke favorit!');
         })
         .catch((err) => {
-          toast.error('Terjadi kesalahan saat menambahkan favorit.');
           console.error('Error:', err);
+          toast.error('Terjadi kesalahan saat menambahkan favorit.');
         });
     }
   };
@@ -61,10 +100,14 @@ const Home = () => {
               <Card.Body>
                 <Card.Title>{recipe.judul}</Card.Title>
                 <Card.Text>{recipe.deskripsi}</Card.Text>
-                <Button variant="link" onClick={() => toggleFavorite(recipe)}>
-                  {favorites.some((fav) => fav.id === recipe.id) ? '❤️' : '🤍'}
-                </Button>
-                <Link to={`/recipe/${recipe.id}`} className="btn btn-primary ml-2">Lihat Detail</Link>
+                {isLoggedIn && (
+                  <Button variant="link" onClick={() => toggleFavorite(recipe)}>
+                    {favorites.some((fav) => fav.id === recipe.id) ? '❤️' : '🤍'}
+                  </Button>
+                )}
+                <Link to={`/recipe/${recipe.id}`} className="btn btn-primary ml-2">
+                  Lihat Detail
+                </Link>
               </Card.Body>
             </Card>
           </Col>

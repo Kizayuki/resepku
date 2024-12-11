@@ -1,39 +1,68 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Container, Row, Col, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Favorites = () => {
   const [favorites, setFavorites] = useState([]);
 
   // Ambil data favorit dari backend
   useEffect(() => {
-    fetch('http://localhost:5000/favorites')
-      .then((res) => res.json())
+    const token = sessionStorage.getItem("token"); // Ambil token dari sessionStorage
+    if (!token) {
+      toast.warning("Login terlebih dahulu untuk melihat daftar favorit.");
+      return;
+    }
+
+    fetch('http://localhost:5000/favorites', {
+      headers: {
+        Authorization: `Bearer ${token}`, // Kirim token di header
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Gagal mengambil data favorit.");
+        }
+        return res.json();
+      })
       .then((data) => setFavorites(data))
-      .catch((err) => console.error('Error:', err));
+      .catch((err) => {
+        console.error('Error fetching favorites:', err);
+        toast.error("Terjadi kesalahan saat mengambil data favorit.");
+      });
   }, []);
 
-  // Tambah atau hapus dari favorit
-  const toggleFavorite = (recipe) => {
-    const isFavorited = favorites.some((fav) => fav.id === recipe.id);
-
-    if (isFavorited) {
-      fetch(`http://localhost:5000/favorites/${recipe.id}`, { method: 'DELETE' })
-        .then(() => setFavorites((prev) => prev.filter((fav) => fav.id !== recipe.id)))
-        .catch((err) => console.error('Error:', err));
-    } else {
-      fetch('http://localhost:5000/favorites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_resep: recipe.id }),
-      })
-        .then(() => setFavorites((prev) => [...prev, recipe]))
-        .catch((err) => console.error('Error:', err));
+  // Hapus dari favorit
+  const handleRemoveFavorite = (recipe) => {
+    const token = sessionStorage.getItem("token"); // Ambil token dari sessionStorage
+    if (!token) {
+      toast.warning("Login terlebih dahulu untuk menghapus favorit.");
+      return;
     }
+
+    fetch(`http://localhost:5000/favorites/${recipe.id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Gagal menghapus dari favorit.");
+        }
+        setFavorites((prev) => prev.filter((fav) => fav.id !== recipe.id));
+        toast.success("Resep berhasil dihapus dari favorit!");
+      })
+      .catch((err) => {
+        console.error('Error removing favorite:', err);
+        toast.error("Terjadi kesalahan saat menghapus dari favorit.");
+      });
   };
 
   return (
     <Container>
+      <ToastContainer />
       <h1 className="my-4">List Resep Favorit</h1>
       <Row>
         {favorites.length === 0 ? (
@@ -46,10 +75,15 @@ const Favorites = () => {
                 <Card.Body>
                   <Card.Title>{recipe.judul}</Card.Title>
                   <Card.Text>{recipe.kategori}</Card.Text>
-                  <Button variant="link" onClick={() => toggleFavorite(recipe)}>
-                    {favorites.some((fav) => fav.id === recipe.id) ? '❤️' : '🤍'}
+                  <Button
+                    variant="danger"
+                    onClick={() => handleRemoveFavorite(recipe)}
+                  >
+                    Hapus dari Favorit
                   </Button>
-                  <Link to={`/recipe/${recipe.id}`} className="btn btn-primary">Lihat Detail</Link>
+                  <Link to={`/recipe/${recipe.id}`} className="btn btn-primary ml-2">
+                    Lihat Detail
+                  </Link>
                 </Card.Body>
               </Card>
             </Col>

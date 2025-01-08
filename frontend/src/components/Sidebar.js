@@ -28,7 +28,7 @@ const Sidebar = () => {
           className="bg-primary text-white border-0"
           onClick={() => navigate('/history')}
         >
-          <i className="bi bi-table me-2"></i> Riwayat Pengunjung
+          <i className="bi bi-table me-2"></i> Riwayat Login
         </ListGroup.Item>
       </ListGroup>
     </div>

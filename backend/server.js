@@ -8,12 +8,12 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-// Koneksi ke database
+// ** Koneksi ke Database **
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'db_resep',
+  database: 'resepku',
 });
 
 db.connect((err) => {
@@ -24,8 +24,19 @@ db.connect((err) => {
   console.log('Koneksi ke database berhasil.');
 });
 
-// ** Routes **
+// ** Middleware untuk Verifikasi Token **
+const authenticateToken = (req, res, next) => {
+  const token = req.header('Authorization')?.split(' ')[1];
+  if (!token) return res.status(401).send('Akses ditolak. Token tidak ditemukan.');
 
+  jwt.verify(token, 'secret_key', (err, user) => {
+    if (err) return res.status(403).send('Token tidak valid.');
+    req.user = user; // Menyimpan informasi user di request
+    next();
+  });
+};
+
+// ** Routes **
 // Ambil semua data resep
 app.get('/recipes', (req, res) => {
   db.query('SELECT * FROM resep', (err, results) => {
@@ -33,7 +44,7 @@ app.get('/recipes', (req, res) => {
       res.status(500).send(err);
       return;
     }
-    res.json(results);
+    res.json(results.length > 0 ? results : []); // Selalu kirim array
   });
 });
 
@@ -114,23 +125,20 @@ app.delete('/recipes/:id', (req, res) => {
   });
 });
 
-// Ambil semua favorit berdasarkan id_user
+// Endpoint untuk daftar favorit
 app.get('/favorites', authenticateToken, (req, res) => {
-  const id_user = req.user.id; // Ambil id_user dari token
+  const id_user = req.user.id;
 
   db.query(
-    `SELECT r.id, r.judul, r.kategori, r.image 
-     FROM favorit f 
-     INNER JOIN resep r ON f.id_resep = r.id 
-     WHERE f.id_user = ?`,
+    'SELECT r.id, r.judul, r.kategori, r.image FROM favorit f JOIN resep r ON f.id_resep = r.id WHERE f.id_user = ?',
     [id_user],
     (err, results) => {
       if (err) {
-        console.error('Error:', err);
+        console.error('Error fetching favorites:', err);
         res.status(500).send(err);
         return;
       }
-      res.json(results); // Kirim daftar favorit
+      res.json(results);
     }
   );
 });
@@ -175,6 +183,37 @@ app.delete('/favorites/:id', authenticateToken, (req, res) => {
       res.status(200).send('Resep berhasil dihapus dari favorit.');
     }
   );
+});
+
+// Endpoint untuk registrasi
+app.post('/register', (req, res) => {
+  const { username, password, role, status } = req.body;
+
+  // Periksa apakah username sudah ada
+  db.query('SELECT * FROM user WHERE username = ?', [username], (err, results) => {
+    if (err) {
+      res.status(500).send(err);
+      return;
+    }
+
+    if (results.length > 0) {
+      res.status(409).send('Username sudah digunakan!');
+      return;
+    }
+
+    // Tambahkan user baru ke database
+    db.query(
+      'INSERT INTO user (username, password, role, status) VALUES (?, ?, ?, ?)',
+      [username, password, role, status],
+      (err) => {
+        if (err) {
+          res.status(500).send(err);
+          return;
+        }
+        res.sendStatus(201); // Registrasi berhasil
+      }
+    );
+  });
 });
 
 // Endpoint untuk login
@@ -222,6 +261,20 @@ app.post('/login', (req, res) => {
       } else {
         res.status(401).send('Username atau password salah.');
       }
+    }
+  );
+});
+
+// Ambil History
+app.get('/history', (req, res) => {
+  db.query(
+    'SELECT username, login_time FROM history WHERE username != "admin" ORDER BY login_time DESC',
+    (err, results) => {
+      if (err) {
+        res.status(500).send(err);
+        return;
+      }
+      res.json(results);
     }
   );
 });
@@ -277,24 +330,25 @@ app.get('/recipes/category/:kategori', (req, res) => {
   );
 });
 
-// Middleware untuk memverifikasi token
-const authenticateToken = (req, res, next) => {
-  const token = req.header('Authorization') && req.header('Authorization').split(' ')[1];
-  if (!token) return res.status(401).send('Akses ditolak. Token tidak ditemukan.');
+// Ambil semua komentar berdasarkan ID resep
+app.get('/comments/:id_resep', (req, res) => {
+  const { id_resep } = req.params;
 
-  jwt.verify(token, 'secret_key', (err, user) => {
-    if (err) return res.status(403).send('Token tidak valid.');
-    req.user = user; // Menyimpan informasi user di request
-    next();
-  });
-};
-
-// Endpoint untuk dashboard yang memerlukan autentikasi
-app.get('/dashboard', authenticateToken, (req, res) => {
-  res.send('Welcome to the dashboard, ' + req.user.username);
+  db.query(
+    'SELECT komentar.komen, komentar.tanggal, user.username FROM komentar JOIN user ON komentar.id_user = user.id WHERE komentar.id_resep = ? ORDER BY komentar.tanggal DESC',
+    [id_resep],
+    (err, results) => {
+      if (err) {
+        console.error('Error fetching comments:', err);
+        res.status(500).send('Terjadi kesalahan saat mengambil komentar.');
+        return;
+      }
+      res.json(results);
+    }
+  );
 });
 
-// Endpoint untuk menambah komentar
+// Tambah komentar
 app.post('/comments', authenticateToken, (req, res) => {
   const { id_resep, komen } = req.body;
   const id_user = req.user.id;
@@ -303,52 +357,33 @@ app.post('/comments', authenticateToken, (req, res) => {
     return res.status(400).send('ID Resep dan komentar harus diisi');
   }
 
-  // Menambahkan komentar ke dalam database
   db.query(
     'INSERT INTO komentar (id_resep, id_user, komen) VALUES (?, ?, ?)',
     [id_resep, id_user, komen],
     (err, result) => {
       if (err) {
-        console.error('Query Error:', err);
-        return res.status(500).send(err);
+        console.error('Error inserting comment:', err);
+        res.status(500).send('Gagal menambahkan komentar.');
+        return;
       }
 
-      // Mengambil komentar yang baru saja ditambahkan
       db.query(
-        'SELECT komentar.id, komentar.komen, komentar.tanggal, users.username FROM komentar JOIN users ON komentar.id_user = users.id WHERE komentar.id = ?',
-        [result.insertId], // Mengambil komentar berdasarkan ID yang baru ditambahkan
+        'SELECT komentar.id, komentar.komen, komentar.tanggal, user.username FROM komentar JOIN user ON komentar.id_user = user.id WHERE komentar.id = ?',
+        [result.insertId],
         (err, results) => {
           if (err) {
-            console.error('Error fetching new comment:', err);
-            return res.status(500).send(err);
+            console.error('Error fetching inserted comment:', err);
+            res.status(500).send('Gagal mengambil komentar yang ditambahkan.');
+            return;
           }
-
-          res.status(201).json(results[0]); // Mengembalikan data komentar yang baru saja ditambahkan
+          res.status(201).json(results[0]);
         }
       );
     }
   );
 });
 
-// Endpoint untuk mengambil komentar berdasarkan ID resep
-app.get('/comments/:id_resep', (req, res) => {
-  const { id_resep } = req.params;
-
-  db.query(
-    'SELECT komentar.komen, komentar.tanggal, users.username FROM komentar JOIN users ON komentar.id_user = users.id WHERE komentar.id_resep = ? ORDER BY komentar.tanggal DESC',
-    [id_resep],
-    (err, results) => {
-      if (err) {
-        console.error('Error:', err);
-        res.status(500).send('Terjadi kesalahan saat mengambil komentar.');
-        return;
-      }
-
-      res.json(results); // Mengembalikan data komentar yang valid
-    }
-  );
-});
-
+// Middleware lainnya...
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log(`Server berjalan di port ${PORT}`);

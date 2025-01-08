@@ -20,7 +20,7 @@ const History = () => {
       <div className="flex-grow-1">
         <AdminNavbar />
         <Container className="mt-4">
-          <h4>Riwayat Pengunjung</h4>
+          <h4>Riwayat Login</h4>
           <Table bordered>
             <thead>
               <tr>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Container, ListGroup, Button, Row, Col } from 'react-bootstrap';
 import { toast, ToastContainer } from 'react-toastify';
-import { Link, useParams } from 'react-router-dom'; // Menggunakan useParams untuk mendapatkan ID resep dari URL
+import { Link, useParams } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
 
 const Comments = () => {

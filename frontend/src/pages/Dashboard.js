@@ -3,14 +3,14 @@ import { Container, Table, Button, Modal, Form } from "react-bootstrap";
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import AdminNavbar from '../components/AdminNavbar';
-import { toast, ToastContainer } from 'react-toastify';  // Impor toast
-import 'react-toastify/dist/ReactToastify.css';  // Impor CSS untuk toast
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [resep, setResep] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ id: null, nama: "", deskripsi: "", kategori: "", bahan: "", langkah: "", image: "" });
+  const [formData, setFormData] = useState({ id: null, nama: "", deskripsi: "", kategori: "", bahan: "", langkah: "", image: null });
 
   // Memeriksa apakah user adalah admin sebelum masuk ke halaman
   useEffect(() => {
@@ -42,7 +42,6 @@ const Dashboard = () => {
 
   // Menampilkan modal untuk tambah atau edit
   const handleShowModal = (data = null) => {
-    // Jika data kosong (untuk tambah resep), set formData dengan nilai default
     setFormData({
       id: data?.id || null,
       nama: data?.judul || "",
@@ -50,10 +49,10 @@ const Dashboard = () => {
       deskripsi: data?.deskripsi || "",
       bahan: data?.bahan || "",
       langkah: data?.langkah || "",
-      image: data?.image || "",
+      image: null, // Reset image
     });
     setShowModal(true); // Menampilkan modal
-  };  
+  };
 
   // Simpan data (tambah atau edit)
   const handleSave = () => {
@@ -61,50 +60,63 @@ const Dashboard = () => {
     const endpoint = formData.id
       ? `http://localhost:5000/recipes/${formData.id}`
       : 'http://localhost:5000/recipes';
-    
+
+    const formPayload = new FormData();
+    formPayload.append('judul', formData.nama);
+    formPayload.append('deskripsi', formData.deskripsi);
+    formPayload.append('kategori', formData.kategori);
+    formPayload.append('bahan', formData.bahan);
+    formPayload.append('langkah', formData.langkah);
+    if (formData.image) {
+      formPayload.append('image', formData.image);
+    }
+
     fetch(endpoint, {
       method,
-      headers: { 
-        'Content-Type': 'application/json',
+      headers: {
         'Authorization': `Bearer ${sessionStorage.getItem('token')}`
       },
-      body: JSON.stringify({
-        judul: formData.nama,
-        deskripsi: formData.deskripsi,
-        kategori: formData.kategori,
-        bahan: formData.bahan,
-        langkah: formData.langkah,
-        image: formData.image,
-      }),
+      body: formPayload,
     })
-    .then((res) => res.json())
-    .then((data) => {
-      if (formData.id) {
-        setResep((prev) => prev.map((recipe) => recipe.id === data.id ? data : recipe));
-        toast.success('Resep berhasil diubah!');
-      } else {
-        setResep((prev) => [...prev, data]);
-        toast.success('Resep berhasil ditambahkan!');
-      }
-    })
-    .catch((err) => {
-      toast.error('Terjadi kesalahan saat menyimpan resep.');
-      console.error('Error:', err);
-    });
+      .then((res) => res.json())
+      .then((data) => {
+        if (formData.id) {
+          setResep((prev) => prev.map((recipe) => recipe.id === data.id ? data : recipe));
+          toast.success('Resep berhasil diubah!');
+        } else {
+          setResep((prev) => [...prev, data]);
+          toast.success('Resep berhasil ditambahkan!');
+        }
+      })
+      .catch((err) => {
+        toast.error('Terjadi kesalahan saat menyimpan resep.');
+        console.error('Error:', err);
+      });
     setShowModal(false);
-  };  
-  
+  };
+
   // Hapus data resep
   const handleDelete = (id) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus resep ini?')) {
-      fetch(`http://localhost:5000/recipes/${id}`, { method: 'DELETE' })
-        .then(() => {
-          setResep((prev) => prev.filter((recipe) => recipe.id !== id));
-          toast.success('Resep berhasil dihapus!');  // Notifikasi sukses
+      fetch(`http://localhost:5000/recipes/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem('token')}`,
+        },
+      })
+        .then((res) => {
+          if (res.ok) {
+            setResep((prev) => prev.filter((recipe) => recipe.id !== id)); // Perbarui daftar resep
+            toast.success('Resep berhasil dihapus!');
+          } else if (res.status === 404) {
+            toast.error('Resep tidak ditemukan.');
+          } else {
+            throw new Error('Gagal menghapus resep.');
+          }
         })
         .catch((err) => {
-          toast.error('Terjadi kesalahan saat menghapus resep.');  // Notifikasi error
           console.error('Error:', err);
+          toast.error('Terjadi kesalahan saat menghapus resep.');
         });
     }
   };  
@@ -124,6 +136,7 @@ const Dashboard = () => {
                   <th>No</th>
                   <th>Nama Resep</th>
                   <th>Kategori</th>
+                  <th>Gambar</th>
                   <th>Tindakan</th>
                 </tr>
               </thead>
@@ -134,10 +147,17 @@ const Dashboard = () => {
                     <td>{item.judul}</td>
                     <td>{item.kategori}</td>
                     <td>
+                      <img
+                        src={`http://localhost:5000${item.image}`}
+                        alt={item.judul}
+                        style={{ width: '100px', height: '70px', objectFit: 'cover' }}
+                      />
+                    </td>
+                    <td>
                       <Button
-                      variant="warning"
-                      size="sm"
-                      onClick={() => handleShowModal(item)} // Mengirimkan data resep untuk edit
+                        variant="warning"
+                        size="sm"
+                        onClick={() => handleShowModal(item)}
                       >
                         Edit
                       </Button>{" "}
@@ -204,12 +224,18 @@ const Dashboard = () => {
                     />
                   </Form.Group>
                   <Form.Group className="mb-3">
-                    <Form.Label>URL Gambar</Form.Label>
+                    <Form.Label>Gambar</Form.Label>
                     <Form.Control
-                      type="text"
-                      value={formData.image}
-                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                      type="file"
+                      onChange={(e) => setFormData({ ...formData, image: e.target.files[0] })}
                     />
+                    {formData.image && typeof formData.image === 'string' && (
+                      <img
+                        src={`http://localhost:5000${formData.image}`}
+                        alt="Preview"
+                        style={{ width: '100px', height: '70px', objectFit: 'cover', marginTop: '10px' }}
+                      />
+                    )}
                   </Form.Group>
                 </Form>
               </Modal.Body>
@@ -225,7 +251,7 @@ const Dashboard = () => {
           </div>
         </Container>
       </div>
-      <ToastContainer /> {/* Menampilkan ToastContainer */}
+      <ToastContainer />
     </div>
   );
 };

@@ -10,7 +10,12 @@ const DataUser = () => {
 
   // Mengambil data user dari backend
   useEffect(() => {
-    fetch('http://localhost:5000/users')
+    const token = sessionStorage.getItem('token');
+    fetch('http://localhost:5000/users', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then((res) => {
         if (!res.ok) {
           throw new Error('Gagal mengambil data user.');
@@ -35,7 +40,10 @@ const DataUser = () => {
 
     fetch(`http://localhost:5000/users/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${sessionStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ status: newStatus }),
     })
       .then((res) => {

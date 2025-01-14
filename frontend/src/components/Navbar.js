@@ -27,8 +27,8 @@ const NavBar = () => {
             {/* Dropdown Kategori */}
             <NavDropdown title="Kategori" id="basic-nav-dropdown">
               <NavDropdown.Item as={Link} to="/category/sarapan">Sarapan</NavDropdown.Item>
-              <NavDropdown.Item as={Link} to="/category/makan-siang">Makan Siang</NavDropdown.Item>
-              <NavDropdown.Item as={Link} to="/category/makan-malam">Makan Malam</NavDropdown.Item>
+              <NavDropdown.Item as={Link} to="/category/makan siang">Makan Siang</NavDropdown.Item>
+              <NavDropdown.Item as={Link} to="/category/makan malam">Makan Malam</NavDropdown.Item>
               <NavDropdown.Item as={Link} to="/category/cemilan">Cemilan</NavDropdown.Item>
             </NavDropdown>
 

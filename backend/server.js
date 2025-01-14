@@ -3,10 +3,21 @@ const mysql = require('mysql');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Folder untuk menyimpan file gambar
+
+// Pastikan folder uploads ada
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+  console.log('Folder uploads berhasil dibuat.');
+}
 
 // ** Koneksi ke Database **
 const db = mysql.createConnection({
@@ -24,17 +35,35 @@ db.connect((err) => {
   console.log('Koneksi ke database berhasil.');
 });
 
-// ** Middleware untuk Verifikasi Token **
+// Middleware untuk memverifikasi token dan peran admin
 const authenticateToken = (req, res, next) => {
   const token = req.header('Authorization')?.split(' ')[1];
   if (!token) return res.status(401).send('Akses ditolak. Token tidak ditemukan.');
 
   jwt.verify(token, 'secret_key', (err, user) => {
     if (err) return res.status(403).send('Token tidak valid.');
-    req.user = user; // Menyimpan informasi user di request
+    req.user = user; // Simpan informasi user dari token
     next();
   });
 };
+
+const verifyAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).send('Akses ditolak. Hanya admin yang diizinkan.');
+  }
+  next();
+};
+
+// ** Konfigurasi Multer untuk upload gambar **
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, './uploads'); // Pastikan folder ini ada
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+const upload = multer({ storage });
 
 // ** Routes **
 // Ambil semua data resep
@@ -44,7 +73,7 @@ app.get('/recipes', (req, res) => {
       res.status(500).send(err);
       return;
     }
-    res.json(results.length > 0 ? results : []); // Selalu kirim array
+    res.json(results);
   });
 });
 
@@ -65,47 +94,40 @@ app.get('/recipes/:id', (req, res) => {
   });
 });
 
-// Tambah resep
-app.post('/recipes', (req, res) => {
-  const { judul, deskripsi, kategori, bahan, langkah, image } = req.body;
+// Tambah resep (admin-only)
+app.post('/recipes', authenticateToken, verifyAdmin, upload.single('image'), (req, res) => {
+  const { judul, deskripsi, kategori, bahan, langkah } = req.body;
+  const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
 
   db.query(
     'INSERT INTO resep (judul, deskripsi, kategori, bahan, langkah, image, tanggal) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-    [judul, deskripsi, kategori, bahan, langkah, image],
+    [judul, deskripsi, kategori, bahan, langkah, imagePath],
     (err, result) => {
       if (err) {
         res.status(500).send(err);
         return;
       }
-      res.json({
-        id: result.insertId,
-        judul,
-        deskripsi,
-        kategori,
-        bahan,
-        langkah,
-        image,
-        tanggal: new Date(),
-      });
+      res.json({ id: result.insertId, judul, deskripsi, kategori, bahan, langkah, image: imagePath });
     }
   );
 });
 
-// Edit resep
-app.put('/recipes/:id', (req, res) => {
+// Edit resep (admin-only)
+app.put('/recipes/:id', authenticateToken, verifyAdmin, upload.single('image'), (req, res) => {
   const { id } = req.params;
-  const { judul, deskripsi, kategori, bahan, langkah, image } = req.body;
+  const { judul, deskripsi, kategori, bahan, langkah } = req.body;
+  const imagePath = req.file ? `/uploads/${req.file.filename}` : req.body.image; // Gunakan gambar lama jika tidak ada gambar baru
 
   db.query(
     'UPDATE resep SET judul = ?, deskripsi = ?, kategori = ?, bahan = ?, langkah = ?, image = ? WHERE id = ?',
-    [judul, deskripsi, kategori, bahan, langkah, image, id],
+    [judul, deskripsi, kategori, bahan, langkah, imagePath, id],
     (err, result) => {
       if (err) {
         res.status(500).send(err);
         return;
       }
       if (result.affectedRows > 0) {
-        res.json({ id, judul, deskripsi, kategori, bahan, langkah, image });
+        res.json({ id, judul, deskripsi, kategori, bahan, langkah, image: imagePath });
       } else {
         res.status(404).send('Resep tidak ditemukan.');
       }
@@ -113,15 +135,21 @@ app.put('/recipes/:id', (req, res) => {
   );
 });
 
-// Hapus resep
-app.delete('/recipes/:id', (req, res) => {
+// Hapus resep (admin-only)
+app.delete('/recipes/:id', authenticateToken, verifyAdmin, (req, res) => {
   const { id } = req.params;
-  db.query('DELETE FROM resep WHERE id = ?', [id], (err) => {
+
+  db.query('DELETE FROM resep WHERE id = ?', [id], (err, result) => {
     if (err) {
-      res.status(500).send(err);
+      console.error('Error:', err);
+      res.status(500).send('Terjadi kesalahan pada server.');
       return;
     }
-    res.sendStatus(200);
+    if (result.affectedRows > 0) {
+      res.status(200).send('Resep berhasil dihapus.');
+    } else {
+      res.status(404).send('Resep tidak ditemukan.');
+    }
   });
 });
 
@@ -286,13 +314,17 @@ app.get('/users', authenticateToken, (req, res) => {
     return res.status(403).send('Akses ditolak, hanya admin yang bisa melihat data user.');
   }
 
-  db.query('SELECT id, username, status FROM user WHERE role != "admin"', (err, results) => {
-    if (err) {
-      res.status(500).send(err);
-      return;
+  // Ambil user dengan role "user" saja
+  db.query(
+    'SELECT id, username, status FROM user WHERE role = "user"',
+    (err, results) => {
+      if (err) {
+        res.status(500).send('Gagal mengambil data user.');
+        return;
+      }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 // Endpoint untuk memperbarui status user

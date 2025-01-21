@@ -9,7 +9,7 @@ const Favorites = () => {
 
   // Ambil data favorit dari backend
   useEffect(() => {
-    const token = sessionStorage.getItem("token"); // Ambil token dari sessionStorage
+    const token = sessionStorage.getItem("token");
     if (!token) {
       toast.warning("Login terlebih dahulu untuk melihat daftar favorit.");
       return;
@@ -17,7 +17,7 @@ const Favorites = () => {
 
     fetch('http://localhost:5000/favorites', {
       headers: {
-        Authorization: `Bearer ${token}`, // Kirim token di header
+        Authorization: `Bearer ${token}`,
       },
     })
       .then((res) => {
@@ -35,7 +35,7 @@ const Favorites = () => {
 
   // Hapus dari favorit
   const handleRemoveFavorite = (recipe) => {
-    const token = sessionStorage.getItem("token"); // Ambil token dari sessionStorage
+    const token = sessionStorage.getItem("token");
     if (!token) {
       toast.warning("Login terlebih dahulu untuk menghapus favorit.");
       return;
@@ -63,7 +63,7 @@ const Favorites = () => {
   return (
     <Container>
       <ToastContainer />
-      <h1 className="my-4">List Resep Favorit</h1>
+      <h1 className="my-4">List Resep Favorit Anda</h1>
       <Row>
         {favorites.length === 0 ? (
           <p>Belum ada resep yang ditambahkan ke favorit.</p>
@@ -71,7 +71,12 @@ const Favorites = () => {
           favorites.map((recipe) => (
             <Col md={4} key={recipe.id} className="mb-4">
               <Card>
-                <Card.Img variant="top" src={recipe.image} alt={recipe.judul} />
+                <Card.Img
+                  className="img-fluid"
+                  style={{ height: '300px', objectFit: 'cover' }}
+                  src={`http://localhost:5000${recipe.image}`}
+                  alt={recipe.judul}
+                />
                 <Card.Body>
                   <Card.Title>{recipe.judul}</Card.Title>
                   <Card.Text>{recipe.kategori}</Card.Text>

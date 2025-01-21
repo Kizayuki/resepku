@@ -21,7 +21,7 @@ const Dashboard = () => {
       return;
     }
     
-    const userData = JSON.parse(atob(token.split('.')[1])); // Decode token untuk memeriksa role
+    const userData = JSON.parse(atob(token.split('.')[1]));
     if (userData.role !== 'admin') {
       alert('Anda harus login sebagai admin untuk mengakses halaman ini!');
       navigate('/login');
@@ -32,7 +32,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetch('http://localhost:5000/recipes', {
       headers: {
-        'Authorization': `Bearer ${sessionStorage.getItem('token')}` // Menyertakan token di header
+        'Authorization': `Bearer ${sessionStorage.getItem('token')}`
       }
     })
       .then((res) => res.json())
@@ -49,9 +49,9 @@ const Dashboard = () => {
       deskripsi: data?.deskripsi || "",
       bahan: data?.bahan || "",
       langkah: data?.langkah || "",
-      image: null, // Reset image
+      image: null,
     });
-    setShowModal(true); // Menampilkan modal
+    setShowModal(true);
   };
 
   // Simpan data (tambah atau edit)
@@ -106,7 +106,7 @@ const Dashboard = () => {
       })
         .then((res) => {
           if (res.ok) {
-            setResep((prev) => prev.filter((recipe) => recipe.id !== id)); // Perbarui daftar resep
+            setResep((prev) => prev.filter((recipe) => recipe.id !== id));
             toast.success('Resep berhasil dihapus!');
           } else if (res.status === 404) {
             toast.error('Resep tidak ditemukan.');

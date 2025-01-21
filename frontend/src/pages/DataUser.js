@@ -79,7 +79,7 @@ const DataUser = () => {
             <Table bordered>
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th>No</th>
                   <th>Username</th>
                   <th>Status</th>
                   <th>Aksi</th>

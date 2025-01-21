@@ -11,39 +11,28 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Cek login berdasarkan token
     const token = sessionStorage.getItem('token');
     setIsLoggedIn(!!token);
 
-    // Ambil data favorit jika user login
     if (token) {
       fetch('http://localhost:5000/favorites', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error('Gagal mengambil data favorit.');
-          }
-          return res.json();
-        })
+        .then((res) => res.json())
         .then((data) => setFavorites(Array.isArray(data) ? data : []))
-        .catch((err) => {
-          console.error('Error fetching favorites:', err);
-          toast.error('Terjadi kesalahan saat mengambil data favorit.');
-        });
+        .catch((err) => toast.error('Terjadi kesalahan saat mengambil data favorit.'));
     }
 
-    // Ambil data resep
     fetch('http://localhost:5000/recipes')
       .then((res) => res.json())
-      .then((data) => setResep(Array.isArray(data) ? data : []))
-      .catch((err) => {
-        console.error('Error fetching recipes:', err);
-        toast.error('Terjadi kesalahan saat mengambil data resep.');
+      .then((data) => {
+        console.log(data);
+        setResep(data);
       })
-      .finally(() => setLoading(false)); // Selesai memuat data
+      .catch((err) => toast.error('Terjadi kesalahan saat mengambil data resep.'))
+      .finally(() => setLoading(false));
   }, []);
 
   const toggleFavorite = (recipe) => {
@@ -66,10 +55,7 @@ const Home = () => {
           setFavorites((prev) => prev.filter((fav) => fav.id !== recipe.id));
           toast.success('Resep dihapus dari favorit!');
         })
-        .catch((err) => {
-          console.error('Error:', err);
-          toast.error('Terjadi kesalahan saat menghapus dari favorit.');
-        });
+        .catch(() => toast.error('Terjadi kesalahan saat menghapus dari favorit.'));
     } else {
       fetch('http://localhost:5000/favorites', {
         method: 'POST',
@@ -83,10 +69,7 @@ const Home = () => {
           setFavorites((prev) => [...prev, recipe]);
           toast.success('Resep ditambahkan ke favorit!');
         })
-        .catch((err) => {
-          console.error('Error:', err);
-          toast.error('Terjadi kesalahan saat menambahkan favorit.');
-        });
+        .catch(() => toast.error('Terjadi kesalahan saat menambahkan favorit.'));
     }
   };
 
@@ -104,16 +87,21 @@ const Home = () => {
       <ToastContainer />
       <h1 className="my-4">Daftar Resep</h1>
       <Row>
-        {Array.isArray(resep) && resep.length > 0 ? (
+        {resep.length === 0 ? (
+          <p>Belum ada resep yang ditambahkan.</p>
+        ) : (
           resep.map((recipe) => (
             <Col md={4} key={recipe.id} className="mb-4">
               <Card>
-                <Card.Img variant="top" src={recipe.image} alt={recipe.judul} />
+                <Card.Img
+                  className="img-fluid"
+                  style={{ height: '300px', objectFit: 'cover' }}
+                  src={`http://localhost:5000${recipe.image}`}
+                  alt={recipe.judul}
+                />
                 <Card.Body>
                   <Card.Title>{recipe.judul}</Card.Title>
-                  <Card.Text>
-                    {recipe.deskripsi ? `${recipe.deskripsi.slice(0, 100)}...` : ''}
-                  </Card.Text>
+                  <Card.Text>{recipe.deskripsi ? `${recipe.deskripsi.slice(0, 100)}...` : ''}</Card.Text>
                   {isLoggedIn && (
                     <Button variant="link" onClick={() => toggleFavorite(recipe)}>
                       {favorites.some((fav) => fav.id === recipe.id) ? '❤️' : '🤍'}
@@ -126,8 +114,6 @@ const Home = () => {
               </Card>
             </Col>
           ))
-        ) : (
-          <p>Belum ada resep tersedia.</p>
         )}
       </Row>
     </Container>

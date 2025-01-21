@@ -10,9 +10,9 @@ const path = require('path');
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Folder untuk menyimpan file gambar
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Pastikan folder uploads ada
+// Memastikan folder uploads ada
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -42,11 +42,12 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, 'secret_key', (err, user) => {
     if (err) return res.status(403).send('Token tidak valid.');
-    req.user = user; // Simpan informasi user dari token
+    req.user = user;
     next();
   });
 };
 
+// Verifikasi Admin
 const verifyAdmin = (req, res, next) => {
   if (req.user.role !== 'admin') {
     return res.status(403).send('Akses ditolak. Hanya admin yang diizinkan.');
@@ -57,7 +58,7 @@ const verifyAdmin = (req, res, next) => {
 // ** Konfigurasi Multer untuk upload gambar **
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, './uploads'); // Pastikan folder ini ada
+    cb(null, './uploads');
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -66,13 +67,16 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // ** Routes **
+
 // Ambil semua data resep
 app.get('/recipes', (req, res) => {
   db.query('SELECT * FROM resep', (err, results) => {
     if (err) {
+      console.error('Error:', err);
       res.status(500).send(err);
       return;
     }
+    console.log('Resep:', results);
     res.json(results);
   });
 });
@@ -94,7 +98,7 @@ app.get('/recipes/:id', (req, res) => {
   });
 });
 
-// Tambah resep (admin-only)
+// Tambah resep
 app.post('/recipes', authenticateToken, verifyAdmin, upload.single('image'), (req, res) => {
   const { judul, deskripsi, kategori, bahan, langkah } = req.body;
   const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
@@ -112,11 +116,11 @@ app.post('/recipes', authenticateToken, verifyAdmin, upload.single('image'), (re
   );
 });
 
-// Edit resep (admin-only)
+// Edit resep
 app.put('/recipes/:id', authenticateToken, verifyAdmin, upload.single('image'), (req, res) => {
   const { id } = req.params;
   const { judul, deskripsi, kategori, bahan, langkah } = req.body;
-  const imagePath = req.file ? `/uploads/${req.file.filename}` : req.body.image; // Gunakan gambar lama jika tidak ada gambar baru
+  const imagePath = req.file ? `/uploads/${req.file.filename}` : req.body.image;
 
   db.query(
     'UPDATE resep SET judul = ?, deskripsi = ?, kategori = ?, bahan = ?, langkah = ?, image = ? WHERE id = ?',
@@ -135,7 +139,7 @@ app.put('/recipes/:id', authenticateToken, verifyAdmin, upload.single('image'), 
   );
 });
 
-// Hapus resep (admin-only)
+// Hapus resep
 app.delete('/recipes/:id', authenticateToken, verifyAdmin, (req, res) => {
   const { id } = req.params;
 
@@ -153,7 +157,7 @@ app.delete('/recipes/:id', authenticateToken, verifyAdmin, (req, res) => {
   });
 });
 
-// Endpoint untuk daftar favorit
+// Ambil daftar favorit
 app.get('/favorites', authenticateToken, (req, res) => {
   const id_user = req.user.id;
 
@@ -174,7 +178,7 @@ app.get('/favorites', authenticateToken, (req, res) => {
 // Tambah ke favorit
 app.post('/favorites', authenticateToken, (req, res) => {
   const { id_resep } = req.body;
-  const id_user = req.user.id; // Ambil id_user dari token
+  const id_user = req.user.id;
 
   if (!id_resep) {
     return res.status(400).send('ID Resep harus diisi.');
@@ -196,8 +200,8 @@ app.post('/favorites', authenticateToken, (req, res) => {
 
 // Hapus dari favorit
 app.delete('/favorites/:id', authenticateToken, (req, res) => {
-  const { id } = req.params; // ID resep
-  const id_user = req.user.id; // Ambil id_user dari token
+  const { id } = req.params;
+  const id_user = req.user.id;
 
   db.query(
     'DELETE FROM favorit WHERE id_resep = ? AND id_user = ?',
@@ -238,7 +242,7 @@ app.post('/register', (req, res) => {
           res.status(500).send(err);
           return;
         }
-        res.sendStatus(201); // Registrasi berhasil
+        res.sendStatus(201);
       }
     );
   });
@@ -307,7 +311,7 @@ app.get('/history', (req, res) => {
   );
 });
 
-// Endpoint untuk mengambil semua user (kecuali admin)
+// Mengambil semua user (kecuali admin)
 app.get('/users', authenticateToken, (req, res) => {
   const { role } = req.user;
   if (role !== 'admin') {
@@ -327,7 +331,7 @@ app.get('/users', authenticateToken, (req, res) => {
   );
 });
 
-// Endpoint untuk memperbarui status user
+// Update status user
 app.patch('/users/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -340,12 +344,12 @@ app.patch('/users/:id', authenticateToken, (req, res) => {
         res.status(500).send(err);
         return;
       }
-      res.sendStatus(200); // Berhasil memperbarui
+      res.sendStatus(200);
     }
   );
 });
 
-// Endpoint untuk mengambil resep berdasarkan kategori
+// Mengambil resep berdasarkan kategori
 app.get('/recipes/category/:kategori', (req, res) => {
   const { kategori } = req.params;
 
@@ -411,6 +415,80 @@ app.post('/comments', authenticateToken, (req, res) => {
           res.status(201).json(results[0]);
         }
       );
+    }
+  );
+});
+
+// Edit komentar
+app.patch('/comments/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { komen } = req.body;
+  const id_user = req.user.id;
+
+  if (!komen || !komen.trim()) {
+    res.status(400).send('Komentar tidak boleh kosong.');
+    return;
+  }
+
+  db.query(
+    'UPDATE komentar SET komen = ? WHERE id = ? AND id_user = ?',
+    [komen, id, id_user],
+    (err, result) => {
+      if (err) {
+        console.error('Error updating comment:', err);
+        res.status(500).send('Terjadi kesalahan saat memperbarui komentar.');
+        return;
+      }
+      if (result.affectedRows === 0) {
+        res.status(404).send('Komentar tidak ditemukan atau Anda tidak memiliki akses.');
+        return;
+      }
+      res.status(200).send('Komentar berhasil diperbarui.');
+    }
+  );
+});
+
+// Delete komentar
+app.delete('/comments/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const id_user = req.user.id;
+
+  db.query(
+    'DELETE FROM komentar WHERE id = ? AND id_user = ?',
+    [id, id_user],
+    (err, result) => {
+      if (err) {
+        console.error('Error deleting comment:', err);
+        res.status(500).send('Terjadi kesalahan saat menghapus komentar.');
+        return;
+      }
+      if (result.affectedRows === 0) {
+        res.status(404).send('Komentar tidak ditemukan atau Anda tidak memiliki akses.');
+        return;
+      }
+      res.status(200).send('Komentar berhasil dihapus.');
+    }
+  );
+});
+
+// Mengambil komentar berdasarkan user login
+app.get('/user-comments', authenticateToken, (req, res) => {
+  const id_user = req.user.id;
+
+  db.query(
+    `SELECT k.id, k.komen, k.tanggal, r.judul, r.id AS id_resep 
+     FROM komentar k 
+     JOIN resep r ON k.id_resep = r.id 
+     WHERE k.id_user = ? 
+     ORDER BY k.tanggal DESC`,
+    [id_user],
+    (err, results) => {
+      if (err) {
+        console.error('Error fetching user comments:', err);
+        res.status(500).send('Terjadi kesalahan saat mengambil komentar.');
+        return;
+      }
+      res.json(results);
     }
   );
 });

@@ -11,11 +11,11 @@ const AdminNavbar = () => {
     const username = sessionStorage.getItem('username');
     
     if (!token || !username) {
-      navigate('/login'); // Jika tidak ada token atau username, arahkan ke halaman login
+      navigate('/login');
     } else {
-      const userData = JSON.parse(atob(token.split('.')[1])); // Decode token untuk mendapatkan data pengguna
+      const userData = JSON.parse(atob(token.split('.')[1]));
       if (userData.role !== 'admin') {
-        navigate('/'); // Jika bukan admin, arahkan ke halaman home
+        navigate('/');
       }
     }
   }, [navigate]);
@@ -25,7 +25,7 @@ const AdminNavbar = () => {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('username');
     alert("Berhasil Logout!");
-    navigate('/login'); // Arahkan ke halaman login setelah logout
+    navigate('/login');
   };
 
   return (

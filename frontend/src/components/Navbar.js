@@ -12,7 +12,7 @@ const NavBar = () => {
     navigate('/login');
   };
 
-  const isLoggedIn = !!sessionStorage.getItem('token'); // Cek jika ada token di sessionStorage
+  const isLoggedIn = !!sessionStorage.getItem('token');
 
   return (
     <BootstrapNavbar bg="light" expand="lg">

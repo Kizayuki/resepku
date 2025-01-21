@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Form, Button, InputGroup } from 'react-bootstrap';
+import { Container, Form, Button, InputGroup, Card } from 'react-bootstrap';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -10,8 +12,6 @@ const Login = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-
-    // Mengirim permintaan login ke backend
     fetch('http://localhost:5000/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -19,7 +19,7 @@ const Login = () => {
     })
       .then((res) => {
         if (res.ok) {
-          return res.json(); // Mengembalikan token jika login berhasil
+          return res.json();
         } else if (res.status === 403) {
           throw new Error('Akun Anda telah diblokir.');
         } else {
@@ -28,11 +28,9 @@ const Login = () => {
       })
       .then((data) => {
         if (data.token) {
-          // Simpan token JWT di sessionStorage
           sessionStorage.setItem('token', data.token);
-          sessionStorage.setItem('username', data.username); // Simpan username jika diperlukan
+          sessionStorage.setItem('username', data.username);
 
-          // Navigasi berdasarkan role pengguna
           if (data.role === 'admin') {
             alert('Login berhasil sebagai Admin!');
             navigate('/dashboard');
@@ -43,49 +41,53 @@ const Login = () => {
         }
       })
       .catch((err) => {
-        alert(err.message); // Menampilkan pesan error jika login gagal
+        alert(err.message);
       });
   };
 
   return (
-    <Container className="my-5">
-      <h2>Login</h2>
-      <Form onSubmit={handleLogin}>
-        <Form.Group controlId="formUsername">
-          <Form.Label>Username</Form.Label>
-          <Form.Control
-            type="text"
-            placeholder="Masukkan Username Anda"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </Form.Group>
-        <Form.Group controlId="formPassword">
-          <Form.Label>Password</Form.Label>
-          <InputGroup>
-            <Form.Control
-              type={showPassword ? "text" : "password"}
-              placeholder="Masukkan Password Anda"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? "Sembunyikan" : "Lihat"}
+    <Container className="d-flex justify-content-center align-items-center vh-100">
+      <Card style={{ width: '25rem' }} className="shadow-sm">
+        <Card.Body>
+          <h2 className="text-center mb-4">Login</h2>
+          <Form onSubmit={handleLogin}>
+            <Form.Group controlId="formUsername">
+              <Form.Label>Username</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Masukkan Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </Form.Group>
+            <Form.Group controlId="formPassword" className="mt-3">
+              <Form.Label>Password</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Masukkan Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} />
+                </Button>
+              </InputGroup>
+            </Form.Group>
+            <Button variant="primary" type="submit" className="w-100 mt-4">
+              Login
             </Button>
-          </InputGroup>
-        </Form.Group>
-        <Button variant="primary" type="submit" className="mt-3">
-          Login
-        </Button>
-        <p className="mt-3">
-          Belum memiliki akun? <a href="/register">Tekan disini</a>
-        </p>
-      </Form>
+            <p className="text-center mt-3">
+              Belum memiliki akun? <a href="/register">Tekan disini</a>
+            </p>
+          </Form>
+        </Card.Body>
+      </Card>
     </Container>
   );
 };

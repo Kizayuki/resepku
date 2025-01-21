@@ -7,7 +7,7 @@ const RecipeDetail = () => {
   const [recipe, setRecipe] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [comment, setComment] = useState('');
-  const [comments, setComments] = useState([]); // Pastikan comments dimulai dengan array kosong
+  const [comments, setComments] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
 
@@ -35,7 +35,7 @@ const RecipeDetail = () => {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())
-        .then((data) => setComments(Array.isArray(data) ? data : [])) // Menyimpan komentar dengan benar
+        .then((data) => setComments(Array.isArray(data) ? data : []))
         .catch((err) => console.error('Error fetching comments:', err));
     }
   }, [id]);
@@ -89,7 +89,7 @@ const RecipeDetail = () => {
     })
       .then((res) => res.json())
       .then((data) => {
-        setComments((prev) => Array.isArray(prev) ? [...prev, data] : [data]); // Memastikan prev adalah array
+        setComments((prev) => Array.isArray(prev) ? [...prev, data] : [data]);
         setComment('');
         setAlertMessage('Komentar berhasil ditambahkan.');
       })
@@ -106,11 +106,17 @@ const RecipeDetail = () => {
       <Card>
         <Card.Body>
           <Card.Title>{recipe.judul}</Card.Title>
-          <Card.Text><strong>Kategori:</strong> {recipe.kategori}</Card.Text>
+          <Card.Img
+            variant="top"
+            className="img-fluid"
+            src={`http://localhost:5000${recipe.image}`}
+            alt={recipe.judul}
+            onError={(e) => { e.target.src = '/default-placeholder.jpg'; }}
+          />
           <Card.Text><strong>Deskripsi:</strong> {recipe.deskripsi}</Card.Text>
+          <Card.Text><strong>Kategori:</strong> {recipe.kategori}</Card.Text>
           <Card.Text><strong>Bahan:</strong> {recipe.bahan}</Card.Text>
           <Card.Text><strong>Langkah:</strong> {recipe.langkah}</Card.Text>
-          <Card.Img variant="top" src={recipe.image} alt={recipe.judul} className="my-3" />
 
           <Button variant="link" onClick={toggleFavorite} className="d-block mt-3">
             {favorites.some((fav) => fav.id === recipe.id) ? '❤️' : '🤍'} Tambah ke Favorit

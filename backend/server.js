@@ -117,21 +117,29 @@ app.post('/recipes', authenticateToken, verifyAdmin, upload.single('image'), (re
 });
 
 // Edit resep
-app.put('/recipes/:id', authenticateToken, verifyAdmin, upload.single('image'), (req, res) => {
+app.put('/recipes/:id', authenticateToken, upload.single('image'), (req, res) => {
   const { id } = req.params;
-  const { judul, deskripsi, kategori, bahan, langkah } = req.body;
-  const imagePath = req.file ? `/uploads/${req.file.filename}` : req.body.image;
+  const { judul, deskripsi, kategori, bahan, langkah, oldImage } = req.body;
+  const image = req.file ? `/uploads/${req.file.filename}` : oldImage;
 
   db.query(
     'UPDATE resep SET judul = ?, deskripsi = ?, kategori = ?, bahan = ?, langkah = ?, image = ? WHERE id = ?',
-    [judul, deskripsi, kategori, bahan, langkah, imagePath, id],
+    [judul, deskripsi, kategori, bahan, langkah, image, id],
     (err, result) => {
       if (err) {
         res.status(500).send(err);
         return;
       }
       if (result.affectedRows > 0) {
-        res.json({ id, judul, deskripsi, kategori, bahan, langkah, image: imagePath });
+        res.json({
+          id,
+          judul,
+          deskripsi,
+          kategori,
+          bahan,
+          langkah,
+          image,
+        });
       } else {
         res.status(404).send('Resep tidak ditemukan.');
       }
